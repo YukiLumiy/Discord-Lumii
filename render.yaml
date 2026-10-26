@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: lumii-bot
+    runtime: node
+    plan: free
+    # UptimeRobot(5分おき)がこのパスを叩いてスリープを防ぐ
+    healthCheckPath: /health
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm --filter @lumii/database build && pnpm --filter @lumii/database push && pnpm --filter @lumii/bot build
+    startCommand: pnpm --filter @lumii/bot start
+    autoDeploy: true
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DATABASE_URL # Neon: Pooled connection
+        sync: false
+      - key: DIRECT_URL # Neon: Direct connection
+        sync: false

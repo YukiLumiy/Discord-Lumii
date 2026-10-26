@@ -1,0 +1,28 @@
+{
+  "name": "lumii",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Lumii - Multi-purpose Discord bot monorepo",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "db:generate": "pnpm --filter @lumii/database generate",
+    "db:build": "pnpm --filter @lumii/database build",
+    "db:push": "pnpm --filter @lumii/database push",
+    "db:migrate": "pnpm --filter @lumii/database migrate",
+    "db:studio": "pnpm --filter @lumii/database studio",
+    "bot:dev": "pnpm --filter @lumii/bot dev",
+    "bot:build": "pnpm --filter @lumii/bot build",
+    "bot:start": "pnpm --filter @lumii/bot start",
+    "bot:deploy-commands": "pnpm --filter @lumii/bot deploy-commands",
+    "bot:clear-commands": "pnpm --filter @lumii/bot clear-commands"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.3",
+    "typescript": "^5.6.3"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0 <23.0.0"
+  }
+}

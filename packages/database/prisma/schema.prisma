@@ -1,0 +1,317 @@
+// Lumii - Prisma Schema
+// 設計方針: 全テーブルに guildId を持たせ、サーバーごとにデータを分離する。
+// モジュール(apps/bot/src/modules/*)ごとにセクションを分けている。
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+  output          = "../generated/client"
+  binaryTargets   = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────
+// general
+// ─────────────────────────────────────────────
+model GuildSettings {
+  id            String   @id @default(cuid())
+  guildId       String   @unique
+  logChannelId  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// honeypot
+// ─────────────────────────────────────────────
+model HoneypotSettings {
+  id                   String   @id @default(cuid())
+  guildId              String   @unique
+  enabled              Boolean  @default(false)
+  channelId            String? // 罠チャンネル
+  action               String   @default("ban") // "ban" | "kick" | "timeout"
+  deleteMessageSeconds Int      @default(3600) // BAN時に遡って削除するメッセージの範囲
+  ignoredRoleIds       String[] // 対象外ロール
+  logChannelId         String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// verification
+// ─────────────────────────────────────────────
+model VerificationSettings {
+  id               String   @id @default(cuid())
+  guildId          String   @unique
+  enabled          Boolean  @default(false)
+  panelChannelId   String?
+  panelMessageId   String?
+  verifiedRoleId   String?
+  unverifiedRoleId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// 認証の成功/失敗ログ
+model VerificationLog {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([guildId, userId])
+}
+
+// ─────────────────────────────────────────────
+// welcome / leave
+// ─────────────────────────────────────────────
+model WelcomeSettings {
+  id              String   @id @default(cuid())
+  guildId         String   @unique
+  welcomeEnabled  Boolean  @default(false)
+  welcomeChannelId String?
+  welcomeMessage  String?
+  leaveEnabled    Boolean  @default(false)
+  leaveChannelId  String?
+  leaveMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// youtube (10分ごとに確認)
+// ─────────────────────────────────────────────
+model YoutubeSubscription {
+  id                 String    @id @default(cuid())
+  guildId            String
+  youtubeChannelId   String // UCxxxxxxxx
+  youtubeChannelName String?
+  discordChannelId   String // 通知先
+  mentionRoleId      String?
+  message            String?
+  lastVideoId        String? // 最後に通知した動画(重複通知防止)
+  lastCheckedAt      DateTime?
+  createdAt          DateTime  @default(now())
+
+  @@unique([guildId, youtubeChannelId])
+  @@index([guildId])
+}
+
+// ─────────────────────────────────────────────
+// levels
+// ─────────────────────────────────────────────
+model LevelSettings {
+  id               String   @id @default(cuid())
+  guildId          String   @unique
+  enabled          Boolean  @default(true)
+  xpMin            Int      @default(15)
+  xpMax            Int      @default(25)
+  cooldownSeconds  Int      @default(60)
+  levelUpEnabled   Boolean  @default(true)
+  levelUpChannelId String? // null = 発言したチャンネル
+  levelUpMessage   String   @default("{user} がレベル {level} に到達しました！")
+  stackRoles       Boolean  @default(false) // false = 最高レベルのロールのみ保持
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model UserLevel {
+  id           String    @id @default(cuid())
+  guildId      String
+  userId       String
+  xp           Int       @default(0)
+  level        Int       @default(0)
+  messageCount Int       @default(0)
+  lastXpAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([guildId, userId])
+  @@index([guildId, xp])
+}
+
+// レベルアップパネルのボタンで祝った人の記録(1人1回、本人は不可)
+model LevelUpCelebration {
+  id           String   @id @default(cuid())
+  guildId      String
+  messageId    String // レベルアップパネルのメッセージID
+  targetUserId String // レベルアップしたユーザー
+  celebratorId String // 祝った人
+  createdAt    DateTime @default(now())
+
+  @@unique([messageId, celebratorId])
+  @@index([messageId])
+}
+
+model LevelRoleReward {
+  id      String @id @default(cuid())
+  guildId String
+  level   Int
+  roleId  String
+
+  @@unique([guildId, level, roleId])
+  @@index([guildId, level])
+}
+
+// XPが入らないチャンネル(コマンド専用チャンネルなど)
+model LevelNoXpChannel {
+  id        String @id @default(cuid())
+  guildId   String
+  channelId String
+
+  @@unique([guildId, channelId])
+}
+
+// レベルアップ祝福パネルの内容(ボタンで祝われた時にパネルを同じ内容で作り直すために保持)
+model LevelUpPost {
+  messageId String   @id // 送信したパネルのメッセージID
+  guildId   String
+  userId    String // レベルアップしたユーザー
+  oldLevel  Int
+  newLevel  Int
+  text      String // 表示した文面(テンプレート展開後)
+  createdAt DateTime @default(now())
+
+  @@index([guildId])
+}
+
+// ─────────────────────────────────────────────
+// clan (ClanJoin) - Roblox Rivals clan join screening
+// ─────────────────────────────────────────────
+model ClanSettings {
+  id              String   @id @default(cuid())
+  guildId         String   @unique
+  panelChannelId  String? // 常設パネルを置くチャンネル
+  panelMessageId  String?
+  reviewChannelId String? // 回答の送信先(管理者専用チャンネル)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// lfp (Looking for Playing) - Duo partner finder
+// ─────────────────────────────────────────────
+model LfpSettings {
+  id             String   @id @default(cuid())
+  guildId        String   @unique
+  panelChannelId String?
+  panelMessageId String?
+  postChannelId  String? // 募集の投稿先(一般ユーザーが見えるチャンネル)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// private-vc
+// ─────────────────────────────────────────────
+model PrivateVcSettings {
+  id               String   @id @default(cuid())
+  guildId          String   @unique
+  enabled          Boolean  @default(false)
+  triggerChannelId String? // 参加すると個別VCが作られるチャンネル
+  categoryId       String?
+  nameTemplate     String   @default("{user}の部屋")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model PrivateVc {
+  id        String   @id @default(cuid())
+  guildId   String
+  channelId String   @unique
+  ownerId   String
+  createdAt DateTime @default(now())
+
+  @@index([guildId])
+}
+
+// ─────────────────────────────────────────────
+// giveaways
+// ─────────────────────────────────────────────
+model Giveaway {
+  id                String          @id @default(cuid())
+  guildId           String
+  channelId         String
+  messageId         String?         @unique
+  hostId            String
+  prize             String
+  description       String? // 賞品の説明・ルールなど
+  imageName         String? // パネルに添付した画像のファイル名(attachment:// で参照)
+  winnerCount       Int             @default(1)
+  endsAt            DateTime
+  ended             Boolean         @default(false)
+  cancelled         Boolean         @default(false)
+  winnerIds         String[] // 抽選結果(再抽選のたびに追加)
+
+  // 参加条件
+  requiredRoleId    String? // このロールを持つ人だけ参加可
+  blacklistRoleId   String? // このロールを持つ人は参加不可
+  minAccountAgeDays Int? // これより新しいアカウントは参加不可
+  minLevel          Int? // Levelsモジュールのレベルが足りない人は参加不可
+
+  // ボーナス / 通知 / 当選後の処理
+  bonusRoleId       String? // このロールを持つ人は当選しやすい
+  bonusEntries      Int             @default(2)
+  pingRoleId        String? // 開始時と終了時にメンションするロール
+  winnersRoleId     String? // 当選者に自動付与するロール
+
+  createdAt         DateTime        @default(now())
+  entries           GiveawayEntry[]
+
+  @@index([guildId, ended])
+  @@index([ended, endsAt])
+}
+
+model GiveawayEntry {
+  id         String   @id @default(cuid())
+  giveawayId String
+  userId     String
+  weight     Int      @default(1) // 参加時点のボーナスロールから算出した当選確率の重み
+  createdAt  DateTime @default(now())
+  giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+
+  @@unique([giveawayId, userId])
+}
+
+// ─────────────────────────────────────────────
+// anti-raid
+// ─────────────────────────────────────────────
+model AntiRaidSettings {
+  id                    String    @id @default(cuid())
+  guildId               String    @unique
+  enabled               Boolean   @default(false)
+  joinThreshold         Int       @default(10) // この人数が…
+  joinWindowSeconds     Int       @default(10) // …この秒数以内に参加したらレイドと判定
+  action                String    @default("lockdown") // "alert" | "lockdown" | "kick" | "ban"
+  minAccountAgeDays     Int       @default(0) // 0 = 無効。これより新しいアカウントは参加時にキック
+  lockdownMinutes       Int       @default(10) // 最後のレイド参加からこの時間が経つとロックダウンを自動解除
+  logChannelId          String?
+  lockdownUntil         DateTime? // ロックダウン中なら解除予定時刻(再起動しても解除できるようDBに保存)
+  lockdownPreviousLevel Int? // ロックダウン前の認証レベル(GuildVerificationLevel)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// anti-nuke
+// ─────────────────────────────────────────────
+model AntiNukeSettings {
+  id                 String   @id @default(cuid())
+  guildId            String   @unique
+  enabled            Boolean  @default(false)
+  maxChannelDeletes  Int      @default(3)
+  maxRoleDeletes     Int      @default(3)
+  maxBans            Int      @default(3)
+  windowSeconds      Int      @default(30)
+  punishment         String   @default("removeRoles") // "removeRoles" | "kick" | "ban"
+  whitelistedUserIds String[]
+  logChannelId       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}

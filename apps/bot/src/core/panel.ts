@@ -19,7 +19,7 @@ import {
  */
 
 export const COLORS = {
-  ruby: 0xe0115f, // ブランドカラー
+  brand: 0x000000, // パネルの左側の線の色(黒)
   success: 0x57f287,
   danger: 0xed4245,
   neutral: 0x2b2d31,
@@ -37,7 +37,7 @@ export const divider = (spacing: SeparatorSpacingSize = SeparatorSpacingSize.Sma
  * ボタンなどを足したいときは戻り値の ContainerBuilder に追加し、最後に addCredit() を呼ぶ。
  */
 export function panel(opts: { title?: string; body?: string; color?: number }): ContainerBuilder {
-  const c = new ContainerBuilder().setAccentColor(opts.color ?? COLORS.ruby);
+  const c = new ContainerBuilder().setAccentColor(opts.color ?? COLORS.brand);
   const head = [opts.title ? `## ${opts.title}` : null, opts.body ?? null].filter((v): v is string => v !== null).join("\n\n");
   if (head) c.addTextDisplayComponents(text(head));
   return c;
@@ -72,7 +72,7 @@ export function v2Ephemeral(...containers: Component[]) {
 export const notice = {
   success: (body: string, title = "Success") => panel({ title, body, color: COLORS.success }),
   error: (body: string, title = "Error") => panel({ title, body, color: COLORS.danger }),
-  info: (body: string, title?: string) => panel({ title, body, color: COLORS.ruby }),
+  info: (body: string, title?: string) => panel({ title, body, color: COLORS.brand }),
 };
 
 /**
@@ -88,7 +88,7 @@ export function panelWithImage(opts: {
   footer?: string;
   color?: number;
 }): ContainerBuilder {
-  const c = new ContainerBuilder().setAccentColor(opts.color ?? COLORS.ruby);
+  const c = new ContainerBuilder().setAccentColor(opts.color ?? COLORS.brand);
   const head = [opts.title ? `## ${opts.title}` : null, opts.text ?? null].filter((v): v is string => v !== null).join("\n\n");
   if (head) c.addTextDisplayComponents(text(head));
   c.addMediaGalleryComponents(

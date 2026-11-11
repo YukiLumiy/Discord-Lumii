@@ -112,7 +112,7 @@ export function applicantPanel(opts: { title: string; intro: string; user: User;
     .setThumbnailAccessory(new ThumbnailBuilder().setURL(user.displayAvatarURL({ size: 256 })));
 
   return new ContainerBuilder()
-    .setAccentColor(COLORS.ruby)
+    .setAccentColor(COLORS.brand)
     .addSectionComponents(header)
     .addSeparatorComponents(divider())
     .addTextDisplayComponents(text(lines))

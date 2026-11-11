@@ -48,7 +48,7 @@ apps/bot/src/
 ├─ scripts/     deploy-commands / clear-commands
 └─ modules/     機能ごとのフォルダ (index.ts が default export で defineModule を返す)
    ├─ _shared/  複数モジュールで共有するコード (自動検出の対象外)
-   └─ general, honeypot, verification, welcome, youtube, levels, clan, lfp,
+   └─ general, honeypot, verification, welcome, youtube, logs, levels, clan, lfp,
       giveaways, anti-raid, anti-nuke
 ```
 
@@ -70,7 +70,7 @@ V2メッセージには `content` と `embeds` を付けられません (文字�
 | general (`/ping`) | Done |
 | clan (`/clan-setup`) | Done 常設パネル → モーダル → 管理者チャンネルへ送信 |
 | lfp (`/lfp-setup`) | Done 常設パネル → モーダル → 公開チャンネルへ投稿 |
-| youtube | In progress 10分ごとの定期実行まで (RSS取得・通知は TODO。実装時は購読一覧をメモリに保持し、DBは新着動画の記録時だけ使う) |
+| youtube | Done `/youtube add\|remove\|list` (10分ごとにRSSで確認。購読はメモリ保持でDBは新着時のみ) |
 | levels (+ 祝福パネル) | Done `/rank` `/leaderboard` `/level-config` `/level-role` `/level-noxp` `/level-test` |
 | verification | Done `/verification-setup` `/verification-config` (画像コード認証) |
 | welcome | Done `/welcome-config` `/welcome-test` |
@@ -78,11 +78,13 @@ V2メッセージには `content` と `embeds` を付けられません (文字�
 | anti-raid | Done `/antiraid-config` `/antiraid-unlock` |
 | anti-nuke | Done `/antinuke-config` `/antinuke-whitelist` (監査ログのイベントで実行者を取得) |
 | honeypot | Done `/honeypot-setup` `/honeypot-config` |
+| logs | Done `/log-config` (message / member / moderation / server / voice の5種類) |
 | private-vc | 実装しない(不採用) |
 
 ## 表示ルール
 
 - Botが出すテキスト・ボタン・パネルに**絵文字は使わない**。強調や区別はDiscordのマークアップで行う。
+- パネルの左側の線は**黒**(`COLORS.brand` = `0x000000`)。成功は緑・エラーと削除系のログは赤・変更系のログはグレー。
 - パネルの基本形は Nyx と同じ: `## 見出し` → 空行 → 本文 → 区切り線 → ボタン → 区切り線 → `-# クレジット`。
 - 注意・ヒントは `callout.warning()` / `callout.tip()`(太字ラベル)を使う。
 - 使うマークアップ: `##` 見出し、`**太字**`、`> 引用`、`` `コード` ``、`-#` サブテキスト、`<#チャンネル>` `<@&ロール>` `<t:UNIX:R>` などのメンション/日時表記。

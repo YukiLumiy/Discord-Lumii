@@ -95,12 +95,28 @@ model YoutubeSubscription {
   discordChannelId   String // 通知先
   mentionRoleId      String?
   message            String?
-  lastVideoId        String? // 最後に通知した動画(重複通知防止)
+  lastVideoId        String? // 最後に通知した動画
+  lastPublishedAt    DateTime? // 最後に通知した動画の公開日時(これより新しい動画だけを通知する)
   lastCheckedAt      DateTime?
   createdAt          DateTime  @default(now())
 
   @@unique([guildId, youtubeChannelId])
   @@index([guildId])
+}
+
+// ─────────────────────────────────────────────
+// logs - 種類ごとにログの送信先チャンネルを設定する(未設定の種類は記録しない)
+// ─────────────────────────────────────────────
+model LogSettings {
+  id                 String   @id @default(cuid())
+  guildId            String   @unique
+  messageChannelId   String? // メッセージの削除・編集
+  memberChannelId    String? // 参加・退出・ニックネーム・ロールの変更
+  moderationChannelId String? // BAN・BAN解除・キック・タイムアウト
+  serverChannelId    String? // チャンネル・ロール・サーバー設定の変更
+  voiceChannelId     String? // ボイスチャンネルの参加・退出・移動
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────────

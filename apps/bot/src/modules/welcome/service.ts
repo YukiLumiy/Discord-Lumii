@@ -60,7 +60,7 @@ export function buildWelcomePanel(o: PanelOptions): ContainerBuilder {
     .setThumbnailAccessory(new ThumbnailBuilder().setURL(o.avatarUrl));
 
   return new ContainerBuilder()
-    .setAccentColor(COLORS.ruby)
+    .setAccentColor(COLORS.brand)
     .addSectionComponents(header)
     .addSeparatorComponents(divider())
     .addTextDisplayComponents(text(`-# Member #${o.count.toLocaleString("en-US")}`));

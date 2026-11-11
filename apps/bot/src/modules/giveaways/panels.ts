@@ -40,7 +40,7 @@ function requirementLines(g: GiveawayView): string | null {
  */
 export function buildGiveawayPanel(g: GiveawayView, entryCount: number): ContainerBuilder {
   const state = g.cancelled ? "cancelled" : g.ended ? "ended" : "active";
-  const color = state === "active" ? COLORS.ruby : state === "cancelled" ? COLORS.danger : COLORS.neutral;
+  const color = state === "active" ? COLORS.brand : state === "cancelled" ? COLORS.danger : COLORS.neutral;
   const c = new ContainerBuilder().setAccentColor(color);
 
   const headLines = [`## ${g.prize}`];

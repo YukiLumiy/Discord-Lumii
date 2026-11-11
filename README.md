@@ -76,9 +76,9 @@ V2メッセージには `content` と `embeds` を付けられません (文字�
 | welcome | Done `/welcome-config` `/welcome-test` |
 | giveaways | Done `/giveaway start\|end\|cancel\|reroll\|list\|entrants` |
 | anti-raid | Done `/antiraid-config` `/antiraid-unlock` |
-| anti-nuke | Planned Nyxから移植予定 |
+| anti-nuke | Done `/antinuke-config` `/antinuke-whitelist` (監査ログのイベントで実行者を取得) |
+| honeypot | Done `/honeypot-setup` `/honeypot-config` |
 | private-vc | 実装しない(不採用) |
-| honeypot | Planned 新規 |
 
 ## 表示ルール
 

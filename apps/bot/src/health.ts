@@ -1,17 +1,15 @@
 import { createServer } from "node:http";
-import { prisma } from "@lumii/database";
-
 /**
  * RenderのWeb Service + UptimeRobot用のヘルスチェックサーバー。
- * UptimeRobotがこのURLを5分おきに叩き、無料枠のスリープを防ぐ。
- * 併せてNeonのコンピュートも起こしておく。
+ * UptimeRobotがこのURLを5分おきに叩き、Render無料枠のスリープを防ぐ。
+ * ここではDBに触れない。Neon無料枠は月100 CU-時間なので、定期的にDBを起こすと
+ * 枠を使い切って月末までDBが止まってしまう(アクセスが無い間は5分で自動停止させる)。
  */
 export function startHealthServer(): void {
   const port = Number(process.env.PORT ?? 3000);
 
   createServer((req, res) => {
     if (req.url === "/" || req.url === "/health") {
-      prisma.$queryRaw`SELECT 1`.catch(() => undefined);
       res.writeHead(200, { "Content-Type": "text/plain" });
       res.end("Lumii is running.");
       return;

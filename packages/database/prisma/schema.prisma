@@ -34,7 +34,7 @@ model HoneypotSettings {
   guildId              String   @unique
   enabled              Boolean  @default(false)
   channelId            String? // 罠チャンネル
-  action               String   @default("ban") // "ban" | "kick" | "timeout"
+  action               String   @default("ban") // "ban" | "softban" | "kick" | "timeout"
   deleteMessageSeconds Int      @default(3600) // BAN時に遡って削除するメッセージの範囲
   ignoredRoleIds       String[] // 対象外ロール
   logChannelId         String?
@@ -305,12 +305,15 @@ model AntiNukeSettings {
   id                 String   @id @default(cuid())
   guildId            String   @unique
   enabled            Boolean  @default(false)
+  // 「windowSeconds 以内にこの回数に達したら発動」。種類ごとに別々に数える
   maxChannelDeletes  Int      @default(3)
   maxRoleDeletes     Int      @default(3)
-  maxBans            Int      @default(3)
+  maxBans            Int      @default(5)
+  maxKicks           Int      @default(5)
   windowSeconds      Int      @default(30)
   punishment         String   @default("removeRoles") // "removeRoles" | "kick" | "ban"
-  whitelistedUserIds String[]
+  whitelistedUserIds String[] // 判定から除外するユーザー(サーバーオーナーとLumii自身は常に除外)
+  whitelistedRoleIds String[] // 判定から除外するロール
   logChannelId       String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

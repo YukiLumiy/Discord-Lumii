@@ -46,8 +46,33 @@ export async function refreshPanel(client: Client, giveawayId: string): Promise<
   await message?.edit(v2(buildGiveawayPanel(g as GiveawayView, g._count.entries))).catch(() => undefined);
 }
 
+// 終了時刻にタイマーで終了する(DBを定期的に見に行かない: Neon無料枠の計算時間を節約するため)。
+// setTimeout の上限(約24.8日)を超えないよう、長い待ち時間は24時間ずつ区切って再設定する。
+const endTimers = new Map<string, NodeJS.Timeout>();
+const MAX_TIMER_MS = 24 * 60 * 60 * 1000;
+
+export function scheduleGiveawayEnd(client: Client, giveawayId: string, endsAt: Date): void {
+  clearTimeout(endTimers.get(giveawayId));
+  const remaining = endsAt.getTime() - Date.now();
+  const timer = setTimeout(() => {
+    endTimers.delete(giveawayId);
+    if (endsAt.getTime() - Date.now() > 1_000) return scheduleGiveawayEnd(client, giveawayId, endsAt);
+    endGiveaway(client, giveawayId).catch((err) => console.error(`[giveaways] failed to end ${giveawayId}`, err));
+  }, Math.min(Math.max(remaining, 0), MAX_TIMER_MS));
+  endTimers.set(giveawayId, timer);
+}
+
+/** 起動時に1回だけDBを読み、開催中の抽選のタイマーを張り直す(期限切れのものはすぐ終了する)。 */
+export async function requeueGiveaways(client: Client): Promise<void> {
+  const active = await prisma.giveaway.findMany({ where: { ended: false, cancelled: false }, select: { id: true, endsAt: true } });
+  for (const g of active as { id: string; endsAt: Date }[]) scheduleGiveawayEnd(client, g.id, g.endsAt);
+  console.log(`[giveaways] scheduled ${active.length} active giveaway(s)`);
+}
+
 /** 抽選を行って終了する。二重に終了しないよう、ended を条件付きで更新して先着1回だけ実行する。 */
 export async function endGiveaway(client: Client, giveawayId: string): Promise<"ended" | "already_ended" | "not_found"> {
+  clearTimeout(endTimers.get(giveawayId));
+  endTimers.delete(giveawayId);
   const claimed = await prisma.giveaway.updateMany({ where: { id: giveawayId, ended: false, cancelled: false }, data: { ended: true } });
   if (claimed.count === 0) {
     const exists = await prisma.giveaway.findUnique({ where: { id: giveawayId }, select: { id: true } });
@@ -100,6 +125,8 @@ async function grantWinnerRole(guild: Guild | null, roleId: string | null, winne
 
 /** 抽選を中止する(当選者は出さない)。 */
 export async function cancelGiveaway(client: Client, giveawayId: string): Promise<boolean> {
+  clearTimeout(endTimers.get(giveawayId));
+  endTimers.delete(giveawayId);
   const claimed = await prisma.giveaway.updateMany({ where: { id: giveawayId, ended: false, cancelled: false }, data: { cancelled: true } });
   if (claimed.count === 0) return false;
   await refreshPanel(client, giveawayId);
@@ -131,12 +158,3 @@ export async function rerollGiveaway(client: Client, giveawayId: string, count: 
   await grantWinnerRole(guild, g.winnersRoleId, newIds);
   return { ok: true, winnerIds: newIds };
 }
-
-/** 終了時刻を過ぎた抽選をまとめて終了する(15秒ごとにschedulerから呼ばれる)。再起動後も取りこぼさない。 */
-export async function endDueGiveaways(client: Client): Promise<void> {
-  const due = await prisma.giveaway.findMany({ where: { ended: false, cancelled: false, endsAt: { lte: new Date() } }, select: { id: true } });
-  for (const { id } of due as { id: string }[]) {
-    await endGiveaway(client, id).catch((err) => console.error(`[giveaways] failed to end ${id}`, err));
-  }
-}
-

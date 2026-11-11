@@ -3,6 +3,7 @@ import { prisma } from "@lumii/database";
 import { text, v2, notice, v2Ephemeral } from "../../../core/panel.js";
 import { parseDuration } from "../../../core/duration.js";
 import { buildGiveawayPanel, type GiveawayView } from "../panels.js";
+import { scheduleGiveawayEnd } from "../service.js";
 
 const MIN_DURATION_MS = 60_000;
 const MAX_DURATION_MS = 90 * 86_400_000;
@@ -84,6 +85,7 @@ export async function startGiveaway(interaction: ChatInputCommandInteraction): P
       allowedMentions: { roles: pingRole ? [pingRole.id] : [] },
     });
     await prisma.giveaway.update({ where: { id: created.id }, data: { messageId: message.id } });
+    scheduleGiveawayEnd(interaction.client, created.id, created.endsAt);
 
     await interaction.editReply(
       v2(notice.success(`**${created.prize}** is live in <#${channel.id}>.\nIt ends <t:${Math.floor(created.endsAt.getTime() / 1000)}:R>.`, "Giveaway started")),
